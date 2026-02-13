@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)]()
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/trongthaohub/Locket-Gold&env=BOT_TOKEN,NEXTDNS_KEY,WEB_APP_URL&project-name=locket-gold&repository-name=locket-gold)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/trongthaohub/Locket-Gold-main&env=BOT_TOKEN,NEXTDNS_KEY,WEB_APP_URL&project-name=Locket-Gold-main&repository-name=Locket-Gold-main)
 
 **The most advanced, high-performance Telegram Bot for automating Locket Gold activation.**  
 *Built with speed, security, and scalability in mind.*
