@@ -10,10 +10,19 @@ from app.bot import setup_bot
 from telegram import Update
 import uuid
 
+print("FastAPI app initializing...")
 app = FastAPI()
+print(f"Current working directory: {os.getcwd()}")
+print(f"Files in current dir: {os.listdir('.')}")
 
-# Global bot application for webhook
-bot_app = setup_bot()
+# Global bot application instance
+_bot_app = None
+
+def get_bot_app():
+    global _bot_app
+    if _bot_app is None:
+        _bot_app = setup_bot()
+    return _bot_app
 
 # In-memory storage for active requests (Mini App progress)
 active_requests = {}
@@ -42,14 +51,18 @@ async def telegram_webhook(request: Request):
         return {"error": "BOT_TOKEN not set"}
         
     try:
+        # Get bot app lazily
+        b_app = get_bot_app()
+        
         # Initialize bot if not already done (Required for Serverless)
-        if not bot_app.updater and not getattr(bot_app, '_initialized', False):
-            await bot_app.initialize()
-            bot_app._initialized = True
+        if hasattr(b_app, 'bot') and b_app.bot is not None:
+            if not getattr(b_app, '_initialized', False):
+                await b_app.initialize()
+                b_app._initialized = True
 
         data = await request.json()
-        update = Update.de_json(data, bot_app.bot)
-        await bot_app.process_update(update)
+        update = Update.de_json(data, b_app.bot)
+        await b_app.process_update(update)
         return {"status": "ok"}
     except Exception as e:
         print(f"Webhook Error: {e}")

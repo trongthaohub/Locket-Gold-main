@@ -3,11 +3,11 @@
     "rewrites": [
         {
             "source": "/api/(.*)",
-            "destination": "api/index.py"
+            "destination": "/vercel_app.py"
         },
         {
             "source": "/(.*)",
-            "destination": "web/$1"
+            "destination": "/web/$1"
         }
     ]
 }
