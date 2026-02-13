@@ -44,6 +44,30 @@ async def read_index():
         return FileResponse(index_path)
     return {"error": "Index file not found"}
 
+@app.get("/api/setup")
+async def setup_webhook():
+    """Helper endpoint to set up Telegram Webhook"""
+    if not BOT_TOKEN:
+        return {"error": "BOT_TOKEN not set in environment variables"}
+    
+    # Get current domain from environment or config
+    domain = os.environ.get("WEB_APP_URL", "").replace("https://", "").replace("http://", "")
+    if not domain:
+        return {"error": "WEB_APP_URL not set. Please set it to your Vercel URL (e.g. https://your-app.vercel.app)"}
+    
+    webhook_url = f"https://{domain}/api/webhook"
+    
+    # Use requests to set webhook
+    import requests
+    tg_url = f"https://api.telegram.org/bot{BOT_TOKEN}/setWebhook?url={webhook_url}"
+    response = requests.get(tg_url)
+    
+    return {
+        "webhook_url": webhook_url,
+        "telegram_response": response.json(),
+        "info": "If success is true, your bot is now running!"
+    }
+
 @app.post("/api/webhook")
 async def telegram_webhook(request: Request):
     """Entry point for Telegram Webhook"""
