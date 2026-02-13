@@ -525,6 +525,17 @@ def get_main_menu_keyboard(lang):
     ])
 
 def setup_bot():
+    if not BOT_TOKEN:
+        print("CRITICAL: BOT_TOKEN is not set in environment variables.")
+        # Return a dummy object if token is missing
+        class DummyApp:
+            def __init__(self):
+                self.bot = None
+            def add_handler(self, *args, **kwargs): pass
+            async def initialize(self): pass
+            async def process_update(self, *args, **kwargs): pass
+        return DummyApp()
+
     logging.basicConfig(
         format='%(message)s',
         level=logging.INFO

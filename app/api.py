@@ -1,6 +1,5 @@
 import asyncio
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import os
@@ -29,19 +28,39 @@ class ActivateRequest(BaseModel):
 
 @app.get("/")
 async def read_index():
-    return FileResponse('web/index.html')
+    # Use absolute path for Vercel
+    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    index_path = os.path.join(base_path, 'web', 'index.html')
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"error": "Index file not found"}
 
 @app.post("/api/webhook")
 async def telegram_webhook(request: Request):
     """Entry point for Telegram Webhook"""
-    data = await request.json()
-    update = Update.de_json(data, bot_app.bot)
-    await bot_app.process_update(update)
-    return {"status": "ok"}
+    if not BOT_TOKEN:
+        return {"error": "BOT_TOKEN not set"}
+        
+    try:
+        # Initialize bot if not already done (Required for Serverless)
+        if not bot_app.updater and not getattr(bot_app, '_initialized', False):
+            await bot_app.initialize()
+            bot_app._initialized = True
+
+        data = await request.json()
+        update = Update.de_json(data, bot_app.bot)
+        await bot_app.process_update(update)
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"Webhook Error: {e}")
+        return {"error": str(e)}
 
 @app.get("/api/stats")
 async def get_stats():
-    return db.get_stats()
+    try:
+        return db.get_stats()
+    except:
+        return {"total": 0, "success": 0, "fail": 0, "unique_users": 0}
 
 @app.post("/api/resolve")
 async def resolve_username(req: ResolveRequest):
@@ -58,7 +77,6 @@ async def resolve_username(req: ResolveRequest):
 
 @app.post("/api/activate")
 async def activate_gold(req: ActivateRequest):
-    # Check limit
     if req.user_id != ADMIN_ID and not db.check_can_request(req.user_id):
         return {"success": False, "error": "Daily limit reached"}
 
@@ -71,9 +89,7 @@ async def activate_gold(req: ActivateRequest):
         "nextdns_id": ""
     }
 
-    # Start background task
     asyncio.create_task(process_activation(request_id, req.uid, req.username, req.user_id))
-    
     return {"success": True, "request_id": request_id}
 
 @app.get("/api/status/{request_id}")
@@ -88,31 +104,20 @@ async def process_activation(request_id, uid, username, user_id):
         if request_id in active_requests:
             active_requests[request_id]["logs"].append(clean_msg)
 
-    # Pick a random token set or round-robin if multiple workers
     import random
     token_config = random.choice(TOKEN_SETS)
 
     success, msg_result = await locket.inject_gold(uid, token_config, log_callback)
-    
     db.log_request(user_id, uid, "SUCCESS" if success else "FAIL")
     
     if success:
         if user_id != ADMIN_ID:
             db.increment_usage(user_id)
-            
         pid, link = await nextdns.create_profile(NEXTDNS_KEY, log_callback)
         active_requests[request_id].update({
-            "completed": True,
-            "success": True,
-            "nextdns_link": link,
-            "nextdns_id": pid
+            "completed": True, "success": True, "nextdns_link": link, "nextdns_id": pid
         })
     else:
         active_requests[request_id].update({
-            "completed": True,
-            "success": False,
-            "error": msg_result
+            "completed": True, "success": False, "error": msg_result
         })
-
-# Serve other static files
-app.mount("/", StaticFiles(directory="web"), name="static")
