@@ -1,4 +1,5 @@
 from app.api import app
 
 # This is the entry point for Vercel
-app = app
+# FastAPI app must be named 'app' for the python runtime
+handler = app
